@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnRetry = document.getElementById("btn-retry");
     const emptyState = document.getElementById("empty-state");
     const btnResetFilters = document.getElementById("btn-reset-filters");
+    const btnExportCsv = document.getElementById("btn-export-csv");
 
     // Selection Bar Elements
     const selectionBar = document.getElementById("selection-bar");
@@ -45,6 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Event Listeners
     btnRefresh.addEventListener("click", () => fetchReleaseNotes(true));
     btnRetry.addEventListener("click", () => fetchReleaseNotes(true));
+    btnExportCsv.addEventListener("click", exportFilteredNotesToCSV);
     
     // Search input
     searchInput.addEventListener("input", (e) => {
@@ -162,6 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
         notesFeed.style.display = "none";
         
         btnRefresh.disabled = true;
+        btnExportCsv.disabled = true;
         refreshIcon.classList.add("spinning");
         lastUpdatedDot.classList.add("syncing");
         lastUpdatedText.textContent = "Syncing feed...";
@@ -176,6 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
         errorMessage.textContent = msg;
 
         btnRefresh.disabled = false;
+        btnExportCsv.disabled = true;
         refreshIcon.classList.remove("spinning");
         lastUpdatedDot.classList.remove("syncing");
         lastUpdatedDot.style.backgroundColor = "var(--color-deprecation)";
@@ -185,6 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function updateLastUpdatedTimestamp(source) {
         btnRefresh.disabled = false;
+        btnExportCsv.disabled = false;
         refreshIcon.classList.remove("spinning");
         lastUpdatedDot.classList.remove("syncing");
         
@@ -456,5 +461,62 @@ document.addEventListener("DOMContentLoaded", () => {
             btnPublishTweet.disabled = false;
             limitWarning.style.display = "none";
         }
+    }
+
+    function exportFilteredNotesToCSV() {
+        if (!releaseNotes || releaseNotes.length === 0) return;
+
+        const csvRows = [];
+        csvRows.push(['Date', 'Type', 'URL', 'Content'].map(escapeCSV).join(','));
+
+        releaseNotes.forEach(entry => {
+            const filteredUpdates = entry.updates.filter(update => {
+                const matchesType = currentFilterType === "all" || update.type.toLowerCase() === currentFilterType;
+                const matchesSearch = searchQuery === "" || 
+                    update.type.toLowerCase().includes(searchQuery) ||
+                    update.text.toLowerCase().includes(searchQuery) ||
+                    entry.date.toLowerCase().includes(searchQuery);
+
+                return matchesType && matchesSearch;
+            });
+
+            filteredUpdates.forEach(update => {
+                const row = [
+                    entry.date,
+                    update.type,
+                    entry.link || '',
+                    update.text
+                ];
+                csvRows.push(row.map(escapeCSV).join(','));
+            });
+        });
+
+        if (csvRows.length <= 1) {
+            alert("No data to export with the current filters.");
+            return;
+        }
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10);
+        const typeStr = currentFilterType !== 'all' ? `_${currentFilterType}` : '';
+        link.setAttribute("href", url);
+        link.setAttribute("download", `bigquery_release_notes_${dateStr}${typeStr}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    function escapeCSV(field) {
+        if (field === null || field === undefined) return '""';
+        const stringVal = String(field);
+        const escaped = stringVal.replace(/"/g, '""');
+        return `"${escaped}"`;
     }
 });
