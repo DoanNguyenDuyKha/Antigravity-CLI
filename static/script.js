@@ -21,6 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const emptyState = document.getElementById("empty-state");
     const btnResetFilters = document.getElementById("btn-reset-filters");
     const btnExportCsv = document.getElementById("btn-export-csv");
+    const btnThemeToggle = document.getElementById("btn-theme-toggle");
+    const themeIcon = document.getElementById("theme-icon");
 
     // Selection Bar Elements
     const selectionBar = document.getElementById("selection-bar");
@@ -40,6 +42,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalSourceText = document.getElementById("modal-source-text");
     const limitWarning = document.getElementById("limit-warning");
 
+    // Theme initialization
+    const currentTheme = localStorage.getItem("theme") || "dark";
+    document.documentElement.setAttribute("data-theme", currentTheme);
+    updateThemeIcon(currentTheme);
+
     // Initialize the app
     fetchReleaseNotes();
 
@@ -47,6 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnRefresh.addEventListener("click", () => fetchReleaseNotes(true));
     btnRetry.addEventListener("click", () => fetchReleaseNotes(true));
     btnExportCsv.addEventListener("click", exportFilteredNotesToCSV);
+    btnThemeToggle.addEventListener("click", toggleTheme);
     
     // Search input
     searchInput.addEventListener("input", (e) => {
@@ -518,5 +526,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const stringVal = String(field);
         const escaped = stringVal.replace(/"/g, '""');
         return `"${escaped}"`;
+    }
+
+    function toggleTheme() {
+        const theme = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+        updateThemeIcon(theme);
+    }
+
+    function updateThemeIcon(theme) {
+        if (theme === "light") {
+            themeIcon.className = "fa-solid fa-moon";
+            btnThemeToggle.setAttribute("title", "Toggle Dark Mode");
+        } else {
+            themeIcon.className = "fa-solid fa-sun";
+            btnThemeToggle.setAttribute("title", "Toggle Light Mode");
+        }
     }
 });
